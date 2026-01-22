@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 # Args
 parser = argparse.ArgumentParser()
-parser.add_argument('--gpu', type=int, default=1)
+parser.add_argument('--gpu', type=int, default=0)
 parser.add_argument('--model', type=str, default='CDL-C')
 parser.add_argument('--channel', type=str, default='CDL-C')
 parser.add_argument('--start_point', type=str, default='Noise')
@@ -43,8 +43,7 @@ if args.model == 'CDL-D':
             target_weights = './models_oct14/\
 numLambdas2_lambdaMin0.1_lambdaMax0.5_sigmaT39.1/final_model.pt'
 elif args.model == 'CDL-C':
-    target_weights = './models_jan29_2022_CDL-C/\
-numLambdas1_lambdaMin0.5_lambdaMax0.5_sigmaT27.8/final_model.pt'
+    target_weights = './pretrained_models/score-deepest-cdl-c.pt'
 elif np.isin(args.model, ['CDL-B', 'CDL-A']):
     target_weights = './models_feb2_%s/\
 numLambdas1_lambdaMin0.5_lambdaMax0.5_sigmaT31.2/final_model.pt' % (

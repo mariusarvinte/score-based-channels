@@ -30,8 +30,8 @@ torch.set_num_threads(num_threads)
 
 # Args
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', type=str, default='CDL-D')
-parser.add_argument('--channel', type=str, default='CDL-D')
+parser.add_argument('--model', type=str, default='CDL-C')
+parser.add_argument('--channel', type=str, default='CDL-C')
 parser.add_argument('--antennas', nargs='+', type=int, default=[16, 64])
 parser.add_argument('--array', type=str, default='ULA')
 parser.add_argument('--spacing', nargs='+', type=float, default=[0.5])
@@ -43,8 +43,7 @@ torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32       = False
 
 # Target weights
-target_weights = './models_jan29_2022_CDL-C/\
-numLambdas1_lambdaMin0.5_lambdaMax0.5_sigmaT27.8/final_model.pt'
+target_weights = './pretrained_models/score-deepest-cdl-c.pt'
 contents = torch.load(target_weights, map_location=torch.device('cpu'))
 # Extract config
 config = contents['config']

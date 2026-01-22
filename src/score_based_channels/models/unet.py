@@ -6,6 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 from typing import List, Tuple
 
+
 class NormUnet(nn.Module):
     """
     Normalized U-Net model.
@@ -63,14 +64,10 @@ class NormUnet(nn.Module):
 
         return (x - mean) / std, mean, std
 
-    def unnorm(
-        self, x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor
-    ) -> torch.Tensor:
+    def unnorm(self, x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
         return x * std + mean
 
-    def pad(
-        self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
+    def pad(self, x: torch.Tensor) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
         _, _, h, w = x.shape
         w_mult = ((w - 1) | 15) + 1
         h_mult = ((h - 1) | 15) + 1
@@ -111,7 +108,8 @@ class NormUnet(nn.Module):
         x = self.chan_complex_to_last_dim(x)
 
         return x
-    
+
+
 class FlippedNormUnet(nn.Module):
     """
     Normalized U-Net model.
@@ -169,14 +167,10 @@ class FlippedNormUnet(nn.Module):
 
         return (x - mean) / std, mean, std
 
-    def unnorm(
-        self, x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor
-    ) -> torch.Tensor:
+    def unnorm(self, x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
         return x * std + mean
 
-    def pad(
-        self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
+    def pad(self, x: torch.Tensor) -> Tuple[torch.Tensor, Tuple[List[int], List[int], int, int]]:
         _, _, h, w = x.shape
         w_mult = ((w - 1) | 15) + 1
         h_mult = ((h - 1) | 15) + 1
@@ -217,7 +211,7 @@ class FlippedNormUnet(nn.Module):
         n = self.chan_complex_to_last_dim(n)
 
         return x - n
-    
+
 
 class Unet(nn.Module):
     """
@@ -370,9 +364,7 @@ class TransposeConvBlock(nn.Module):
         self.out_chans = out_chans
 
         self.layers = nn.Sequential(
-            nn.ConvTranspose2d(
-                in_chans, out_chans, kernel_size=2, stride=2, bias=False
-            ),
+            nn.ConvTranspose2d(in_chans, out_chans, kernel_size=2, stride=2, bias=False),
             nn.InstanceNorm2d(out_chans),
             nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )

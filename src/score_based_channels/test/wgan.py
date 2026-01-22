@@ -41,7 +41,7 @@ random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
 # Target file
-target_dir = 'wgan_%s_%.2f/extra1' % (args.model, args.spacing)
+target_dir = './models/wgan_%s_%.2f/extra1' % (args.model, args.spacing)
 target_file = os.path.join(target_dir, 'weights_epoch6000.pt')
 contents    = torch.load(target_file)
 # Get config

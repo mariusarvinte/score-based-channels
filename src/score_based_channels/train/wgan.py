@@ -109,9 +109,9 @@ optimizerG = optim.RMSprop(netG.parameters(), lr = config.lrG)
 
 # Logs
 if len(config.data.spacing_list) == 1:
-    model_dir = 'wgan_CDL_D_%.2f' % config.data.spacing_list[0]
+    model_dir = './models/wgan_CDL_D_%.2f' % config.data.spacing_list[0]
 else:
-    model_dir = 'wgan_CDL_D_min%.2f_max%.2f' % (
+    model_dir = './models/wgan_CDL_D_min%.2f_max%.2f' % (
         np.min(config.data.spacing_list), np.max(config.data.spacing_list))
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)

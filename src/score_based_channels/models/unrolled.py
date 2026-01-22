@@ -4,8 +4,8 @@
 import torch, copy
 
 from torch import nn
-from . import basicmodels as B
-from .aux_unet import NormUnet, FlippedNormUnet
+from score_based_channels.models import basicmodels as B
+from score_based_channels.models.unet import NormUnet, FlippedNormUnet
 
 class SRCNN(nn.Module):
     def __init__(self, num_channels=1):

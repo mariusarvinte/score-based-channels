@@ -8,11 +8,11 @@ import numpy as np
 import torch
 from torch.optim.lr_scheduler import StepLR
 
-from .aux_models import LDAMP
+from score_based_channels.models.unrolled import LDAMP
 from dotmap import DotMap
 from tqdm import tqdm
 
-from .loaders          import Channels
+from score_based_channels.models.loaders          import Channels
 from torch.utils.data import DataLoader
 import argparse
 

@@ -8,7 +8,7 @@ sys.path.append('./')
 from tqdm import tqdm as tqdm
 from ncsnv2.models.ncsnv2 import NCSNv2Deepest
 
-from loaders          import Channels
+from score_based_channels.models.loaders          import Channels
 from torch.utils.data import DataLoader
 
 # Args

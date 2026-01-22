@@ -13,7 +13,7 @@ from ncsnv2.models.ncsnv2 import NCSNv2Deepest
 from ncsnv2.losses        import get_optimizer
 from ncsnv2.losses.dsm    import anneal_dsm_score_estimation
 
-from .loaders          import Channels
+from score_based_channels.models.loaders          import Channels
 from torch.utils.data import DataLoader
 from dotmap           import DotMap
 

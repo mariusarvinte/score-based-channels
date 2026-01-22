@@ -11,9 +11,9 @@ from torch.autograd import Variable
 import os
 
 import numpy as np
-from .loaders import Channels
+from score_based_channels.models.loaders import Channels
 
-from . import aux_gan as dcgan
+from score_based_channels.models import dcgan
 from dotmap import DotMap
 
 # !!! Always !!! Otherwise major headache on RTX 3090 cards

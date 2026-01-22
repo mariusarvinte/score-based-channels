@@ -20,7 +20,7 @@ import torch, sys, itertools, copy, argparse
 sys.path.append('./')
 
 from tqdm import tqdm as tqdm
-from loaders          import Channels
+from score_based_channels.models.loaders          import Channels
 from torch.utils.data import DataLoader
 torch.set_num_threads(num_threads)
 

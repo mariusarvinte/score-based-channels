@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 # Args
 parser = argparse.ArgumentParser()
-parser.add_argument('--gpu',     type=int, default=1)
+parser.add_argument('--gpu',     type=int, default=0)
 parser.add_argument('--mode',    type=str, default='single')
 parser.add_argument('--model',   type=str, default='CDL-C')
 parser.add_argument('--channel', type=str, default='CDL-C')
@@ -41,7 +41,7 @@ random.seed(manualSeed)
 torch.manual_seed(manualSeed)
 
 # Target file
-target_dir = './models/wgan_%s_%.2f/extra1' % (args.model, args.spacing)
+target_dir = './models/wgan_%s_%.2f' % (args.model, args.spacing)
 target_file = os.path.join(target_dir, 'weights_epoch6000.pt')
 contents    = torch.load(target_file)
 # Get config
@@ -51,7 +51,7 @@ config      = contents['config']
 train_seed, val_seed = 1234, 4321
 dataset    = Channels(train_seed, config, norm=config.data.norm_channels)
 dataloader = torch.utils.data.DataLoader(dataset, 
-         batch_size=config.batchSize, shuffle=True, num_workers=2)
+         batch_size=config.batchSize, shuffle=True, num_workers=2 if os.name == "posix" else 0)
 
 # Extract stuff
 ngpu = 1 # Always
@@ -63,7 +63,7 @@ n_extra_layers = int(config.n_extra_layers)
 
 # Get generator and load weights
 netG = dcgan.DCGAN_G_Ours(config.imageSize, nz, nc, ngf, ngpu,
-                          n_extra_layers+config.extra_gen_layers)
+                          n_extra_layers)
 # !!! Load weights
 netG.load_state_dict(contents['gen_state'])
 netG = netG.cuda()

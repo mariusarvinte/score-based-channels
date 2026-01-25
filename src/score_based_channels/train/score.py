@@ -18,7 +18,6 @@ from ncsnv2.losses.dsm import anneal_dsm_score_estimation
 
 from score_based_channels.models.loaders import Channels
 from torch.utils.data import DataLoader
-from dotmap import DotMap
 
 
 @dataclass
@@ -73,6 +72,9 @@ class DataConfig:
     num_pilots: int = 64
     norm_channels: str = "global"
     spacing_list: list[float] = field(default_factory=lambda: [0.5])
+
+    logit_transform: bool = False
+    rescaled: bool = False
 
     def __post_init__(self):
         self.num_pilots = self.image_size[1]

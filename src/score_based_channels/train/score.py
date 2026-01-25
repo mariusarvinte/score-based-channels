@@ -32,6 +32,7 @@ class ModelConfig:
     sigma_rate: float = 0.995
     num_classes: int = 2311
 
+    # TODO: Validate options
     def __post_init__(self):
         # Dynamically calculate sigma_end if not provided
         self.sigma_end = self.sigma_begin * self.sigma_rate ** (self.num_classes - 1)
@@ -161,29 +162,6 @@ def main(cfg: TrainScoreConfig):
             dist_matrix[idx] = np.linalg.norm(
                 flat_channels[idx][None, :] - flat_channels, axis=-1
             )
-
-    # Choose the inference step size (epsilon) according to [Song '20]
-    # candidate_steps = np.logspace(-13, -8, 1000)
-    # step_criterion = np.zeros((len(candidate_steps)))
-    # gamma_rate = 1 / config.model.sigma_rate
-    # for idx, step in enumerate(candidate_steps):
-    #     step_criterion[idx] = (1 - step / config.model.sigma_end**2) ** (
-    #         2 * config.model.num_classes
-    #     ) * (
-    #         gamma_rate**2
-    #         - 2
-    #         * step
-    #         / (
-    #             config.model.sigma_end**2
-    #             - config.model.sigma_end**2
-    #             * (1 - step / config.model.sigma_end**2) ** 2
-    #         )
-    #     ) + 2 * step / (
-    #         config.model.sigma_end**2
-    #         - config.model.sigma_end**2 * (1 - step / config.model.sigma_end**2) ** 2
-    #     )
-    # best_idx = np.argmin(np.abs(step_criterion - 1.0))
-    # config.model.step_size = candidate_steps[best_idx]
 
     # Instantiate model
     diffuser = NCSNv2Deepest(config)

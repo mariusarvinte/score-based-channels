@@ -32,10 +32,25 @@ class ModelConfig:
     sigma_rate: float = 0.995
     num_classes: int = 2311
 
-    # TODO: Validate options
     def __post_init__(self):
         # Dynamically calculate sigma_end if not provided
         self.sigma_end = self.sigma_begin * self.sigma_rate ** (self.num_classes - 1)
+
+        normalizations = ["BatchNorm", "InstanceNorm", "InstanceNorm++", "VarianceNorm", "NoneNorm"]
+        if self.normalization not in normalizations:
+            raise ValueError(
+                f"Invalid normalization {self.normalization}! Should be one of {normalizations}"
+            )
+
+        nonlinearities = ["elu", "relu", "lrelu", "swish"]
+        if self.nonlinearity not in nonlinearities:
+            raise ValueError(f"Invalid nonlinearity {self.nonlinearity}! Should be one of {nonlinearities}")
+
+        sigma_dists = ["geometric", "uniform"]
+        if self.sigma_dist not in sigma_dists:
+            raise ValueError(
+                f"Invalid sigma distribution {self.sigma_dist}! Should be one of {sigma_dists}"
+            )
 
 
 @dataclass
@@ -95,9 +110,7 @@ class TrainScoreConfig:
 
     def __post_init__(self):
         if self.gpu >= torch.cuda.device_count() or self.gpu < 0:
-            self.device = (
-                "cpu" if torch.cuda.device_count() == 0 else f"cuda:{self.gpu}"
-            )
+            self.device = "cpu" if torch.cuda.device_count() == 0 else f"cuda:{self.gpu}"
         else:
             self.device = f"cuda:{self.gpu}"
 
@@ -116,9 +129,7 @@ def main(cfg: TrainScoreConfig):
     torch.backends.cudnn.benchmark = True
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-    print(
-        f"Starting training on device: {config.device} for channel: {config.data.channel}"
-    )
+    print(f"Starting training on device: {config.device} for channel: {config.data.channel}")
 
     # Seeds for train and test datasets
     train_seed, val_seed = 1234, 4321
@@ -140,9 +151,7 @@ def main(cfg: TrainScoreConfig):
         val_config = copy.deepcopy(config)
         val_config.data.spacing_list = [config.data.spacing_list[idx]]
         # Create locals
-        val_datasets.append(
-            Channels(val_seed, val_config, norm=[dataset.mean, dataset.std])
-        )
+        val_datasets.append(Channels(val_seed, val_config, norm=[dataset.mean, dataset.std]))
         val_loaders.append(
             DataLoader(
                 val_datasets[-1],
@@ -159,9 +168,7 @@ def main(cfg: TrainScoreConfig):
         dist_matrix = np.zeros((len(dataset), len(dataset)))
         flat_channels = dataset.channels.reshape((len(dataset), -1))
         for idx in tqdm(range(len(dataset))):
-            dist_matrix[idx] = np.linalg.norm(
-                flat_channels[idx][None, :] - flat_channels, axis=-1
-            )
+            dist_matrix[idx] = np.linalg.norm(flat_channels[idx][None, :] - flat_channels, axis=-1)
 
     # Instantiate model
     diffuser = NCSNv2Deepest(config)

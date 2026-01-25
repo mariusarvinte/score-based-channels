@@ -5,6 +5,8 @@ import hydra
 import numpy as np
 import torch, os, copy
 
+from typing import Any
+
 from dataclasses import dataclass, field
 from tqdm import tqdm as tqdm
 from hydra.core.config_store import ConfigStore
@@ -86,7 +88,7 @@ class DataConfig:
     noise_std: float = 0.0
     image_size: list[int] = field(default_factory=lambda: [16, 64])
     num_pilots: int = 64
-    norm_channels: str = "global"
+    norm_channels: Any = "global"
     spacing_list: list[float] = field(default_factory=lambda: [0.5])
 
     logit_transform: bool = False
@@ -95,8 +97,26 @@ class DataConfig:
     def __post_init__(self):
         self.num_pilots = self.image_size[1]
 
-        if self.channel not in ["CDL-A", "CDL-B", "CDL-C", "CDL-D"]:
-            raise ValueError(f"Invalid channel {self.channel}")
+        channels = ["CDL-A", "CDL-B", "CDL-C", "CDL-D"]
+        if self.channel not in channels:
+            raise ValueError(f"Invalid channel {self.channel}! Should be one of {channels}")
+
+        if type(self.norm_channels) not in [str, list]:
+            raise ValueError(f"Data normalization should be either a string or list!")
+
+        norm_channels = ["global", "entrywise"]
+        if type(self.norm_channels) == str and self.norm_channels not in norm_channels:
+            raise ValueError(
+                f"Invalid data normalization string {self.norm_channels}! Should be one of {norm_channels}"
+            )
+        if type(self.norm_channels) == list and (
+            len(self.norm_channels) != 2
+            or type(self.norm_channels[0]) != float
+            or type(self.norm_channels[1]) != float
+        ):
+            raise ValueError(
+                f"Invalid data normalization floats {self.norm_channels}! Should be exactly two floating-point values!"
+            )
 
 
 @dataclass

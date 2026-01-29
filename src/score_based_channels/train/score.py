@@ -104,6 +104,8 @@ class DataConfig:
 @dataclass
 class TrainScoreConfig:
     gpu: int = 0
+    train_seed: int = 1234
+    val_seed: int = 4321
 
     model: ModelConfig = field(default_factory=ModelConfig)
     optim: OptimConfig = field(default_factory=OptimConfig)
@@ -126,19 +128,14 @@ cs.store(name="train_score_config", node=TrainScoreConfig)
 def main(cfg: TrainScoreConfig):
     config = OmegaConf.to_object(cfg)
 
-    # Environment & Backend setup
+    # Environment & backend setup
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
     torch.backends.cudnn.benchmark = True
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-
     print(f"Starting training on device: {config.device} for channel: {config.data.channel}")
 
-    # Seeds for train and test datasets
-    train_seed, val_seed = 1234, 4321
-
     # Get datasets and loaders for channels
-    dataset = Channels(train_seed, config, config.data.norm_method, config.data.norm_values)
+    dataset = Channels(config.train_seed, config, config.data.norm_method, config.data.norm_values)
     dataloader = DataLoader(
         dataset,
         batch_size=config.training.batch_size,
@@ -154,7 +151,7 @@ def main(cfg: TrainScoreConfig):
         val_config = copy.deepcopy(config)
         val_config.data.spacing_list = [config.data.spacing_list[idx]]
         # Create locals
-        val_datasets.append(Channels(val_seed, val_config, norm_values=[dataset.mean, dataset.std]))
+        val_datasets.append(Channels(config.val_seed, val_config, norm_values=[dataset.mean, dataset.std]))
         val_loaders.append(
             DataLoader(
                 val_datasets[-1],
@@ -166,18 +163,8 @@ def main(cfg: TrainScoreConfig):
         )
         val_iters.append(iter(val_loaders[-1]))  # For validation
 
-    # TODO: Clean this up and have a flag to actually use it
-    if False:  # Set to true to follow [Song '20] exactly
-        dist_matrix = np.zeros((len(dataset), len(dataset)))
-        flat_channels = dataset.channels.reshape((len(dataset), -1))
-        for idx in tqdm(range(len(dataset))):
-            dist_matrix[idx] = np.linalg.norm(flat_channels[idx][None, :] - flat_channels, axis=-1)
-
-    # Instantiate model
-    diffuser = NCSNv2Deepest(config)
-    diffuser = diffuser.cuda()
-
-    # Instantiate optimizer
+    # Instantiate model and optimizer
+    diffuser = NCSNv2Deepest(config).to(config.device)
     optimizer = get_optimizer(config, diffuser.parameters())
 
     # Instantiate counters and EMA helper
@@ -193,7 +180,7 @@ def main(cfg: TrainScoreConfig):
     val_H_list = []
     for idx in range(len(config.data.spacing_list)):
         val_sample = next(val_iters[idx])
-        val_H_list.append(val_sample["H_herm"].cuda())
+        val_H_list.append(val_sample["H_herm"].to(config.device))
 
     # Logging
     config.log_path = "./models/score/%s" % config.data.channel
@@ -208,15 +195,10 @@ def main(cfg: TrainScoreConfig):
             step += 1
             # Move data to device
             for key in sample:
-                sample[key] = sample[key].cuda()
+                sample[key] = sample[key].to(config.device)
 
             # Compute DSM loss using Hermitian channels
-            loss = anneal_dsm_score_estimation(
-                diffuser,
-                sample["H_herm"],
-                sigmas,
-                None,
-            )
+            loss = anneal_dsm_score_estimation(diffuser, sample["H_herm"], sigmas, None)
 
             # Logging
             if step == 1:
@@ -245,12 +227,7 @@ def main(cfg: TrainScoreConfig):
                 local_val_losses = []
                 for idx in range(len(config.data.spacing_list)):
                     with torch.no_grad():
-                        val_dsm_loss = anneal_dsm_score_estimation(
-                            val_score,
-                            val_H_list[idx],
-                            sigmas,
-                            None,
-                        )
+                        val_dsm_loss = anneal_dsm_score_estimation(val_score, val_H_list[idx], sigmas, None)
                     # Store
                     local_val_losses.append(val_dsm_loss.item())
                 # Sanity delete
@@ -267,13 +244,7 @@ def main(cfg: TrainScoreConfig):
                 elif len(local_val_losses) >= 2:
                     print(
                         "Epoch %d, Step %d, Train Loss (EMA) %.3f, Val. Loss (Split) %.3f %.3f"
-                        % (
-                            epoch,
-                            step,
-                            running_loss,
-                            local_val_losses[0],
-                            local_val_losses[1],
-                        )
+                        % (epoch, step, running_loss, local_val_losses[0], local_val_losses[1])
                     )
 
     # Save final weights

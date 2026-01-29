@@ -24,11 +24,6 @@ from torch.utils.data import DataLoader
 
 @dataclass
 class ModelConfig:
-    ema: bool = True
-    ema_rate: float = 0.999
-    normalization: str = "InstanceNorm++"
-    nonlinearity: str = "elu"
-    sigma_dist: str = "geometric"
     ngf: int = 32
     sigma_begin: float = 39.15
     sigma_rate: float = 0.995
@@ -37,41 +32,36 @@ class ModelConfig:
     def __post_init__(self):
         # Dynamically calculate sigma_end if not provided
         self.sigma_end = self.sigma_begin * self.sigma_rate ** (self.num_classes - 1)
-
-        normalizations = ["BatchNorm", "InstanceNorm", "InstanceNorm++", "VarianceNorm", "NoneNorm"]
-        if self.normalization not in normalizations:
-            raise ValueError(
-                f"Invalid normalization {self.normalization}! Should be one of {normalizations}"
-            )
-
-        nonlinearities = ["elu", "relu", "lrelu", "swish"]
-        if self.nonlinearity not in nonlinearities:
-            raise ValueError(f"Invalid nonlinearity {self.nonlinearity}! Should be one of {nonlinearities}")
-
-        sigma_dists = ["geometric", "uniform"]
-        if self.sigma_dist not in sigma_dists:
-            raise ValueError(
-                f"Invalid sigma distribution {self.sigma_dist}! Should be one of {sigma_dists}"
-            )
+        # Assign constant values
+        self.ema: bool = True
+        self.ema_rate: float = 0.999
+        self.normalization: str = "InstanceNorm++"
+        self.nonlinearity: str = "relu"
+        self.sigma_dists: str = "geometric"
 
 
 @dataclass
 class OptimConfig:
-    weight_decay: float = 0.000
     optimizer: str = "Adam"
     lr: float = 0.0001
-    beta1: float = 0.9
-    amsgrad: bool = False
-    eps: float = 0.001
+
+    def __post_init__(self):
+        optimizers = ["Adam", "RMSProp", "SGD"]
+        if self.optimizer not in optimizers:
+            raise ValueError(f"Invalid optimizer {self.optimizer}! Should be one of {optimizers}")
+        # Assign constant values
+        self.weight_decay: float = 0.000
+        if self.optimizer == "Adam":
+            self.beta1: float = 0.9
+            self.amsgrad: bool = False
+            self.eps: float = 0.001
 
 
 @dataclass
 class TrainingConfig:
     batch_size: int = 32
-    num_workers: int = 4
     n_epochs: int = 400
-    anneal_power: int = 2
-    log_all_sigmas: bool = False
+    num_workers: int = 4
 
     def __post_init__(self):
         if os.name != "posix" and self.num_workers > 0:
@@ -84,10 +74,8 @@ class TrainingConfig:
 @dataclass
 class DataConfig:
     channel: str = "CDL-C"
-    channels: int = 2  # {Re, Im}
     noise_std: float = 0.0
     image_size: list[int] = field(default_factory=lambda: [16, 64])
-    num_pilots: int = 64
     norm_channels: Any = "global"
     spacing_list: list[float] = field(default_factory=lambda: [0.5])
 
@@ -95,6 +83,7 @@ class DataConfig:
     rescaled: bool = False
 
     def __post_init__(self):
+        self.channels = len(self.image_size)
         self.num_pilots = self.image_size[1]
 
         channels = ["CDL-A", "CDL-B", "CDL-C", "CDL-D"]
@@ -130,9 +119,10 @@ class TrainScoreConfig:
 
     def __post_init__(self):
         if self.gpu >= torch.cuda.device_count() or self.gpu < 0:
-            self.device = "cpu" if torch.cuda.device_count() == 0 else f"cuda:{self.gpu}"
-        else:
-            self.device = f"cuda:{self.gpu}"
+            raise ValueError(
+                f"Invalid GPU {self.gpu} selected! Must be one of {torch.cuda.device_count()} available GPUs"
+            )
+        self.device = f"cuda:{self.gpu}"
 
 
 cs = ConfigStore.instance()
@@ -229,7 +219,10 @@ def main(cfg: TrainScoreConfig):
 
             # Compute DSM loss using Hermitian channels
             loss = anneal_dsm_score_estimation(
-                diffuser, sample["H_herm"], sigmas, None, config.training.anneal_power
+                diffuser,
+                sample["H_herm"],
+                sigmas,
+                None,
             )
 
             # Logging
@@ -264,7 +257,6 @@ def main(cfg: TrainScoreConfig):
                             val_H_list[idx],
                             sigmas,
                             None,
-                            config.training.anneal_power,
                         )
                     # Store
                     local_val_losses.append(val_dsm_loss.item())

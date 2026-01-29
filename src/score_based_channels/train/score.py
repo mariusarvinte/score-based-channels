@@ -5,12 +5,10 @@ import hydra
 import numpy as np
 import torch, os, copy
 
-from typing import Any
-
 from dataclasses import dataclass, field
 from tqdm import tqdm as tqdm
 from hydra.core.config_store import ConfigStore
-from omegaconf import OmegaConf, MISSING
+from omegaconf import OmegaConf
 
 from ncsnv2.models import get_sigmas
 from ncsnv2.models.ema import EMAHelper
@@ -37,7 +35,7 @@ class ModelConfig:
         self.ema_rate: float = 0.999
         self.normalization: str = "InstanceNorm++"
         self.nonlinearity: str = "relu"
-        self.sigma_dists: str = "geometric"
+        self.sigma_dist: str = "geometric"
 
 
 @dataclass
@@ -76,7 +74,8 @@ class DataConfig:
     channel: str = "CDL-C"
     noise_std: float = 0.0
     image_size: list[int] = field(default_factory=lambda: [16, 64])
-    norm_channels: Any = "global"
+    norm_method: str = "global"
+    norm_values: list[float] | None = None
     spacing_list: list[float] = field(default_factory=lambda: [0.5])
 
     logit_transform: bool = False
@@ -90,21 +89,15 @@ class DataConfig:
         if self.channel not in channels:
             raise ValueError(f"Invalid channel {self.channel}! Should be one of {channels}")
 
-        if type(self.norm_channels) not in [str, list]:
-            raise ValueError(f"Data normalization should be either a string or list!")
-
-        norm_channels = ["global", "entrywise"]
-        if type(self.norm_channels) == str and self.norm_channels not in norm_channels:
+        norm_methods = ["global", "entrywise"]
+        if self.norm_method not in norm_methods:
             raise ValueError(
-                f"Invalid data normalization string {self.norm_channels}! Should be one of {norm_channels}"
+                f"Invalid normalization method {self.norm_method}! Should be one of {norm_methods}"
             )
-        if type(self.norm_channels) == list and (
-            len(self.norm_channels) != 2
-            or type(self.norm_channels[0]) != float
-            or type(self.norm_channels[1]) != float
-        ):
+
+        if self.norm_values and len(self.norm_values) != 2:
             raise ValueError(
-                f"Invalid data normalization floats {self.norm_channels}! Should be exactly two floating-point values!"
+                f"Normalization values {self.norm_values} must contain exactly two floats (mean, std)!"
             )
 
 
@@ -145,7 +138,7 @@ def main(cfg: TrainScoreConfig):
     train_seed, val_seed = 1234, 4321
 
     # Get datasets and loaders for channels
-    dataset = Channels(train_seed, config, norm=config.data.norm_channels)
+    dataset = Channels(train_seed, config, config.data.norm_method, config.data.norm_values)
     dataloader = DataLoader(
         dataset,
         batch_size=config.training.batch_size,
@@ -161,7 +154,7 @@ def main(cfg: TrainScoreConfig):
         val_config = copy.deepcopy(config)
         val_config.data.spacing_list = [config.data.spacing_list[idx]]
         # Create locals
-        val_datasets.append(Channels(val_seed, val_config, norm=[dataset.mean, dataset.std]))
+        val_datasets.append(Channels(val_seed, val_config, norm_values=[dataset.mean, dataset.std]))
         val_loaders.append(
             DataLoader(
                 val_datasets[-1],
@@ -268,14 +261,12 @@ def main(cfg: TrainScoreConfig):
                 # Print
                 if len(local_val_losses) == 1:
                     print(
-                        "Epoch %d, Step %d, Train Loss (EMA) %.3f, \
-    Val. Loss %.3f"
+                        "Epoch %d, Step %d, Train Loss (EMA) %.3f, Val. Loss %.3f"
                         % (epoch, step, running_loss, local_val_losses[0])
                     )
                 elif len(local_val_losses) >= 2:
                     print(
-                        "Epoch %d, Step %d, Train Loss (EMA) %.3f, \
-    Val. Loss (Split) %.3f %.3f"
+                        "Epoch %d, Step %d, Train Loss (EMA) %.3f, Val. Loss (Split) %.3f %.3f"
                         % (
                             epoch,
                             step,

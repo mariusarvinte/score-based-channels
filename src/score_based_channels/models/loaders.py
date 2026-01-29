@@ -9,7 +9,7 @@ import numpy as np
 class Channels(Dataset):
     """MIMO Channels"""
 
-    def __init__(self, seed, config, norm=None):
+    def __init__(self, seed, config, norm_method=None, norm_values=None):
         # Get spacings
         target_spacings = config.data.spacing_list
         target_channel = config.data.channel
@@ -37,38 +37,21 @@ class Channels(Dataset):
         self.channels = np.reshape(self.channels, (-1, self.channels.shape[-2], self.channels.shape[-1]))
 
         # Normalize
-        if type(norm) == list:
-            self.mean = norm[0]
-            self.std = norm[1]
-        elif norm == "entrywise":
+        if norm_values is not None:
+            self.mean, self.std = norm_values
+        elif norm_method == "entrywise":
             self.mean = np.mean(self.channels, axis=0)
             self.std = np.std(self.channels, axis=0)
-        elif norm == "global":
+        elif norm_method == "global":
             self.mean = 0.0
             self.std = np.std(self.channels)
+        else:
+            raise ValueError(f"Invalid data normalization specified!")
 
         # Generate random QPSK pilots
-        self.pilots = (
-            1
-            / np.sqrt(2)
-            * (
-                2
-                * np.random.binomial(
-                    1, 0.5, size=(self.channels.shape[0], config.data.image_size[1], config.data.num_pilots)
-                )
-                - 1
-                + 1j
-                * (
-                    2
-                    * np.random.binomial(
-                        1,
-                        0.5,
-                        size=(self.channels.shape[0], config.data.image_size[1], config.data.num_pilots),
-                    )
-                    - 1
-                )
-            )
-        )
+        real = 2 * np.random.binomial(1, 0.5, size=(self.channels.shape[0], config.data.image_size[1], config.data.num_pilots)) - 1
+        imag = 2 * np.random.binomial(1, 0.5, size=(self.channels.shape[0], config.data.image_size[1], config.data.num_pilots)) - 1
+        self.pilots = 1 / np.sqrt(2) * (real + 1j * imag)
 
         # Complex noise power
         self.noise_power = 1 / np.sqrt(2) * config.data.noise_std

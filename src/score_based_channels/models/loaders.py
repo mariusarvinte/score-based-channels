@@ -49,8 +49,9 @@ class Channels(Dataset):
             raise ValueError(f"Invalid data normalization specified!")
 
         # Generate random QPSK pilots
-        real = 2 * np.random.binomial(1, 0.5, size=(self.channels.shape[0], config.data.image_size[1], config.data.num_pilots)) - 1
-        imag = 2 * np.random.binomial(1, 0.5, size=(self.channels.shape[0], config.data.image_size[1], config.data.num_pilots)) - 1
+        pilot_size = (self.channels.shape[0], config.data.image_size[1], config.data.num_pilots)
+        real = 2 * np.random.binomial(1, 0.5, size=pilot_size) - 1
+        imag = 2 * np.random.binomial(1, 0.5, size=pilot_size) - 1
         self.pilots = 1 / np.sqrt(2) * (real + 1j * imag)
 
         # Complex noise power

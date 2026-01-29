@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import hydra
-import numpy as np
 import torch, os, copy
 
 from dataclasses import dataclass, field
